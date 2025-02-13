@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from langchain_community.callbacks import get_openai_callback
 from langchain_google_genai import ChatGoogleGenerativeAI
 import json
@@ -7,6 +7,8 @@ from collections import Counter
 import fanoutqa
 import tiktoken
 import pandas as pd
+import os
+import argparse
 
 def get_prompt(question):
     prompt = (
@@ -18,7 +20,12 @@ def get_closed_book_output(args):
     dataset = pd.read_csv(args.data_path, sep='\t')
     output = list()
     for index in tqdm(range(0, len(dataset))):
-        llm = ChatOpenAI(model=MODEL, max_tokens=2000, temperature=0)
+        llm = AzureChatOpenAI(
+            deployment_name=args.answer_model,
+            api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+            max_tokens=2000,
+            temperature=0
+        )
         prompt = get_prompt(dataset["Prompt"][index])
         messages = [
                     {"role": "user", "content": prompt}
@@ -48,31 +55,45 @@ def get_search_prompt(question, passages):
     return prompt.format(context=context, question=question)
 
 def get_search_output(args):
+    dataset = json.load(open(args.data_path))
+    dataset_map = {str(dataset[index]["id"]): dataset[index]["question"] for index in range(0, len(dataset))}
     data = json.load(open(args.inp_path))
-    dataset = pd.read_csv(args.data_path, sep='\t')
-    dataset_map = {str(dataset["ID"][index]): dataset["Prompt"][index] for index in range(0, len(dataset))}
     output = list()
     counts = list()
     for item in tqdm(data):
+        print(item["id"])
+        print(dataset_map[str(item["id"])])
         counts.append(len(item["aggregated_output"]))
-        llm = ChatOpenAI(model=MODEL, max_tokens=2000, temperature=0)
+        llm = AzureChatOpenAI(
+            deployment_name=args.answer_model,
+            api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+            max_tokens=2000,
+            temperature=0
+        )
         messages = [
-                    {"role": "user", "content": get_search_prompt(dataset_map[item["id"]], item["aggregated_output"])}
+                    {"role": "user", "content": get_search_prompt(dataset_map[str(item["id"])], item["aggregated_output"])}
                 ]
-        with get_openai_callback() as cb:
+        
+        try:
             response = llm.invoke(messages)  
+            response_content = response.content
+        except Exception as e:
+            print(e)
+            response_content = str(e)
 
         output.append({
-            "id": item["id"],
-            "answer": response.content
+            "id": str(item["id"]),
+            "answer": response_content
         })
+    
+    json.dump(output, open(args.out_path, "w"), indent=4)
     
     return output
 
 def run_eval(answers, args):
-
     output = list()
-    dataset = pd.read_csv(args.data_path, sep='\t')
+    dataset = json.load(open(args.data_path))
+    # dataset = pd.read_csv(args.data_path, sep='\t')
 
     prompt = """"===Task===
 I need your help in evaluating an answer provided by an LLM against a ground truth answer for a given question. Your task is to determine if the ground truth answer is present in the LLM's response. Please analyze the provided data and make a decision.
@@ -95,9 +116,9 @@ Response Format:
     "Decision": "TRUE" or "FALSE"
 }}"""
 
-    answers = {item["id"]: item["answer"] for item in answers}
-    for index in tqdm(range(0, len(dataset)):
-        id = str(dataset["ID"][index])
+    answers = {str(item["id"]): item["answer"] for item in answers}
+    for index in tqdm(range(0, len(dataset))):
+        id = str(dataset[index]["id"])
         if id not in answers:
             print("Not present: ", id)
             output.append(
@@ -108,17 +129,28 @@ Response Format:
                 }
             )
         else:
-            llm = ChatOpenAI(model=MODEL, max_tokens=2000, temperature=0)
-            structured_llm = llm.with_structured_output(method="json_mode", include_raw=True)            
+            llm = AzureChatOpenAI(
+                deployment_name=args.answer_model,
+                api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+                max_tokens=2000,
+                temperature=0
+            )
+            print(dataset[index]["question"])
+            print(answers[id])
+            print(dataset[index]["answer"])
             messages = [
-                        {"role": "user", "content": prompt.format(question=dataset["Prompt"][index], predicted=answers[id], answer=dataset["Answer"][index])}
-                    ]
-            response = structured_llm.invoke(messages)  
+                {"role": "user", "content": prompt.format(question=dataset[index]["question"], predicted=answers[id], answer=dataset[index]["answer"])}
+            ]
+            response = llm.invoke(messages)
+            try:
+                decision = json.loads(response.content)["Decision"]
+            except:
+                decision = "FALSE"
 
             output.append(
                 {                    
                     "id": id,
-                    "eval": str(response["parsed"]["Decision"]).lower(),
+                    "eval": str(decision).lower(),
                     "present": True
                 }
             )
