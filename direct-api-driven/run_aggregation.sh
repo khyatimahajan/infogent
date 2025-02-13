@@ -7,7 +7,7 @@
 mkdir -p results
 
 # Run FanOutQA aggregation
-python run_fanoutqa.py \
+python run_fanoutqa_wiki.py \
     --navigator_model gpt-4o-mini \
     --aggregator_model gpt-4o-mini \
     --extractor_model gpt-4o-mini \

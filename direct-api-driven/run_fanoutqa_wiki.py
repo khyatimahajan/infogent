@@ -4,8 +4,8 @@ import re
 from langchain_community.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
 from autogpt import AutoGPT
 from langchain.agents import Tool
-from langchain_openai import AzureChatOpenAI
-from langchain_openai import AzureOpenAIEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.callbacks import get_openai_callback
@@ -109,13 +109,11 @@ class BFSAgent:
         vectorstore = FAISS(EMBEDDINGS_MODEL, index, InMemoryDocstore({}), {})
 
         # Initialize the agent LLM
-        agent_llm = AzureChatOpenAI(
+        agent_llm = ChatOpenAI(
             temperature=0.7,
-            deployment_name=self.chat_deployment,
             model_name="gpt-4",
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
-            api_version=self.api_version,
             max_retries=3
         )
 
@@ -172,9 +170,8 @@ class BFSAgent:
             {"role": "user", "content": inp_prompt}
         ]
         
-        llm = AzureChatOpenAI(
-            azure_deployment=self.chat_deployment,
-            api_version=self.api_version,
+        llm = ChatOpenAI(
+            model=self.chat_deployment,
             max_tokens=2000, 
             temperature=0
         )
@@ -359,9 +356,8 @@ class BFSAgent:
             {"role": "user", "content": inp_prompt}
         ]
         
-        llm = AzureChatOpenAI(
-            azure_deployment=self.chat_deployment,
-            api_version=self.api_version,
+        llm = ChatOpenAI(
+            model=self.chat_deployment,
             max_tokens=1000, 
             temperature=0.7
         )
@@ -534,8 +530,8 @@ class BFSAgent:
             except Exception as e:
                 if "DeploymentNotFound" in str(e):
                     if attempt == max_retries - 1:  # Last attempt
-                        print(f"Error: Azure OpenAI deployment not found after {max_retries} retries.")
-                        output["navigator_output"] = "Error: Azure OpenAI deployment configuration issue"
+                        print(f"Error: Llama deployment not found after {max_retries} retries.")
+                        output["navigator_output"] = "Error: Llama deployment configuration issue"
                     else:
                         print(f"Deployment not found, retrying... (attempt {attempt+1}/{max_retries})")
                         time.sleep(5)  # Wait 5 seconds before retrying
@@ -608,19 +604,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--chat_deployment",
-        help="Azure OpenAI chat deployment name",
+        help="OpenAI chat deployment name",
         required=True,
         type=str
     )
     parser.add_argument(
         "--embedding_deployment", 
-        help="Azure OpenAI embedding deployment name",
-        required=True,
-        type=str
-    )
-    parser.add_argument(
-        "--api_version",
-        help="Azure OpenAI API version",
+        help="OpenAI embedding deployment name",
         required=True,
         type=str
     )
