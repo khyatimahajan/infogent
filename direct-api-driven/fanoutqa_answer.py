@@ -1,9 +1,9 @@
-from langchain_openai import ChatOpenAI
-from langchain_community.callbacks import get_openai_callback
+from langchain_openai import AzureChatOpenAI
 import json
 from tqdm import tqdm
 import fanoutqa
 import argparse
+from fanoutqa.eval import evaluate
 
 def get_prompt(question):
     prompt = (
@@ -31,13 +31,17 @@ def get_closed_book_output(args):
     dataset = json.load(open(args.data_path))
     output = list()
     for item in tqdm(dataset):
-        llm = ChatOpenAI(model=args.answer_model, max_tokens=4000, temperature=0)
+        llm = AzureChatOpenAI(
+            azure_deployment=args.chat_deployment,
+            api_version=args.api_version,
+            max_tokens=4000, 
+            temperature=0
+        )
         prompt = get_prompt(item["question"])
         messages = [
                     {"role": "user", "content": prompt}
                 ]
-        with get_openai_callback() as cb:
-            response = llm.invoke(messages)  
+        response = llm.invoke(messages)  
 
         output.append({
             "id": item["id"],
@@ -54,12 +58,16 @@ def get_search_output(args):
     counts = list()
     for item in tqdm(data):
         counts.append(len(item["aggregated_output"]))
-        llm = ChatOpenAI(model=args.answer_model, max_tokens=4000, temperature=0)
+        llm = AzureChatOpenAI(
+            azure_deployment=args.chat_deployment,
+            api_version=args.api_version,
+            max_tokens=4000, 
+            temperature=0
+        )
         messages = [
                     {"role": "user", "content": get_search_prompt(dataset_map[item["id"]], item["aggregated_output"])}
                 ]
-        with get_openai_callback() as cb:
-            response = llm.invoke(messages)  
+        response = llm.invoke(messages)  
 
         output.append({
             "id": item["id"],
@@ -81,10 +89,15 @@ def serialize_object(obj):
         raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def run_eval(answers, args):
-    data = json.load(open(args, args.data_path))
-    qs = [DictToObject(q) for q in data]
-    scores = fanoutqa.eval.evaluate(qs, answers)
-    json.dump(scores, open(args.score_path, "w"), indent=4, default=serialize_object)           
+    # Save answers with a unique name
+    answer_path = args.out_path.replace('.json', '_answers.json')
+    json.dump(answers, open(answer_path, "w"), indent=4)
+    
+    # Then run evaluation
+    # data = json.load(open(args.data_path))
+    # qs = [DictToObject(q) for q in data]
+    # scores = evaluate(qs, answers)
+    # json.dump(scores, open(args.score_path, "w"), indent=4, default=serialize_object)           
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -119,6 +132,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--score_path",
         help="Output Score file path",
+        required=True,
+        type=str
+    )
+    parser.add_argument(
+        "--chat_deployment",
+        help="Azure OpenAI chat deployment name",
+        required=True,
+        type=str
+    )
+    parser.add_argument(
+        "--api_version",
+        help="Azure OpenAI API version",
         required=True,
         type=str
     )

@@ -13,7 +13,7 @@ from tqdm import tqdm
 import faiss
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
-import markdownify
+from markdownify import markdownify as md
 import requests
 from typing import List, Dict
 from cachetools import TTLCache, cached
@@ -25,6 +25,7 @@ import time
 import datetime
 import httpx
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.tools import Tool, tool
 
 
 DATASET_EPOCH = datetime.datetime(year=2023, month=11, day=20, tzinfo=datetime.timezone.utc)
@@ -54,13 +55,6 @@ class BFSAgent:
         self.embedding_deployment = args.embedding_deployment
         self.api_version = args.api_version
         
-        # Initialize search tool with explicit API key
-        serper_api_key = os.getenv("SERPER_API_KEY")
-        if not serper_api_key:
-            raise ValueError("SERPER_API_KEY environment variable not set")
-        print(f"Initializing search with Serper API key: {serper_api_key[:8]}...")
-        self.search_tool = GoogleSerperAPIWrapper(serper_api_key=serper_api_key)
-
         self.enc = tiktoken.get_encoding("cl100k_base")
 
         self.aggregator_messages = list()
@@ -98,9 +92,9 @@ class BFSAgent:
         """Initialize the navigation agent with AutoGPT"""
         tools = [
             Tool(
-                name = "search",
+                name="search",
                 func=self.search,
-                description="Useful for when you need to gather information from the web. You should ask targeted questions"
+                description="Useful for searching Wikipedia articles. Returns relevant articles with their titles and snippets."
             ),
             Tool(
                 name = "extract",
@@ -207,40 +201,89 @@ class BFSAgent:
         except:
             return [response.content], response.content, True
 
+    def wikipedia_to_markdown(self, title: str) -> str:
+        """Convert Wikipedia page content to markdown format using markdownify, removing CSS styles."""
+        try:
+            url = "https://en.wikipedia.org/w/api.php"
+            params = {
+                "action": "parse",
+                "page": title,
+                "format": "json",
+                "prop": "text",
+                "origin": "*"  # Avoids potential CORS issues
+            }
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+
+            # Retrieve HTML content from the JSON response
+            html_content = response.json().get("parse", {}).get("text", {}).get("*", "")
+            if not html_content:
+                return ""
+
+            # Remove <style>...</style> blocks from the HTML to eliminate unwanted CSS
+            cleaned_html = re.sub(r'<style[^>]*>.*?</style>', '', html_content, flags=re.DOTALL)
+
+            # Convert the cleaned HTML to markdown
+            markdown_text = md(cleaned_html)
+            return markdown_text
+
+        except Exception as e:
+            print(f"Error converting Wikipedia page to markdown: {e}")
+            return ""
+
     def search(self, query: str) -> List[Dict]:
-        """Useful for when you need to gather information from the web. You should ask targeted questions"""
-        # Don't try to invoke the agent directly for thoughts
+        """Search Wikipedia for information using the MediaWiki API."""
+        print("\n=====================================")
+        print("SEARCH METHOD CALLED DIRECTLY")
+        print(f"Query received: {query}")
+        print("=====================================\n")
+                   
         self.last_search_thought = f"Searching for: {query}"
-        print(f"\n=== Search Request ===")
+        print(f"\n=== Wikipedia Search Request ===")
         print(f"Query: {query}")
         
         search_start = time.time()
         try:
-            # Add site:wikipedia.org to ensure we get Wikipedia results
-            full_query = f"{query} site:wikipedia.org"
-            results = self.search_tool.results(full_query)
+            search_url = "https://en.wikipedia.org/w/api.php"
+            params = {
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "format": "json",
+                "origin": "*",
+            }
+            print(f"Making API request to: {search_url}")
+            print(f"With params: {params}")
             
-            if not results or "organic" not in results:
-                print("No search results found")
-                return []
-                
+            response = requests.get(search_url, params=params)
+            print(f"Response status code: {response.status_code}")
+            if response.status_code != 200:
+                print(f"Search failed with status code: {response.status_code}")
+                print("Response content:", response.text)
+            
             snippets = []
-            for r in results["organic"][:3]:
-                snippet = {
-                    "title": r.get("title", "No title"),
-                    "url": r.get("link", ""),
-                    "snippet": r.get("snippet", "No snippet available")
-                }
-                snippets.append(snippet)
-                print(f"\nFound result: {snippet['title']}")
-                print(f"URL: {snippet['url']}")
-                print(f"Snippet: {snippet['snippet']}\n")
+            if response.status_code == 200:
+                search_results = response.json().get("query", {}).get("search", [])
+                print(f"Total results found: {len(search_results)}")
+                
+                for i, result in enumerate(search_results[:3]):
+                    title = result["title"]
+                    url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                    snippet = {
+                        "title": title,
+                        "url": url,
+                        "snippet": " ".join(self.wikipedia_to_markdown(title).split()[:250])
+                    }
+                    snippets.append(snippet)
+                    # print(f"\nResult {i+1}:")
+                    # print(f"Title: {snippet['title']}")
+                    print(f"URL: {snippet['url']}")
+                    # print(f"Snippet: {snippet['snippet'][:100]} ... {snippet['snippet'][-100:]}")
             
             self.search_time += time.time() - search_start
+            # print(f"\nSearch completed in {time.time() - search_start:.2f} seconds")
             self.current_query = query
             
-            if not snippets:
-                print("No valid snippets extracted from results")
             return snippets
             
         except Exception as e:
@@ -425,9 +468,9 @@ class BFSAgent:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             html = response.content
-            text = BeautifulSoup(html, 'html.parser').get_text()
-            cleaned_text = re.sub(r'\n+', '\n', text)
-            content = markdownify.markdownify(cleaned_text, heading_style="ATX")
+            # text = BeautifulSoup(html, 'html.parser').get_text()
+            # cleaned_text = re.sub(r'\n+', '\n', text)
+            content = md(html, heading_style="ATX")
         except Exception as e:
             print(str(e))
             content = ""
@@ -473,6 +516,8 @@ class BFSAgent:
         You will work in conjunction with an aggregator assistant (which runs as part of the "extract" command) that keeps track of information aggregated and will give feedback to you on what information to look for next. You can decide to stop if aggregator assistant tells you so or if you keep running into a loop. You can simply terminate at the end with a message saying aggregation is done.
 
         Note that you can only search for one piece of information at a time. For the multi-hop query, it is good to break it down and gather relevant information sequentially over multiple iterations. If the extract command suggests you to search for multiple pieces of information, you should search for each piece sequentially over different iterations.
+
+         Make sure to use "extract" command after searching for the most relevant websites! The queries should be entity based as used in wikipedia.
 
         Current date: 11-20-2023.
         Query: {task}
@@ -583,7 +628,7 @@ if __name__ == "__main__":
 
     starting_index = 58
     data = json.load(open(args.inp_path))
-    data = data[starting_index:]
+    data = data[:starting_index]
     output = list()
     log = list()
     for item in tqdm(data):

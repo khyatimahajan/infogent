@@ -48,7 +48,6 @@ class AutoGPT:
         self.feedback_tool = feedback_tool
         self.chat_history_memory = chat_history_memory or ChatMessageHistory()
         self.max_iterations = max_iterations
-        self.chain_cost = 0.0
 
     @classmethod
     def from_llm_and_tools(
@@ -72,6 +71,14 @@ class AutoGPT:
         )
         human_feedback_tool = HumanInputRun() if human_in_the_loop else None
         chain = LLMChain(llm=llm, prompt=prompt)
+        
+        # Initialize chat history with system message
+        chat_history = chat_history_memory or ChatMessageHistory()
+        system_message = SystemMessage(content=f"""You are {ai_name}, {ai_role}.
+Your decisions must always be made independently without seeking user assistance.
+Play to your strengths as an LLM and pursue simple strategies with no legal complications.""")
+        chat_history.add_message(system_message)
+        
         return cls(
             ai_name,
             memory,
@@ -80,7 +87,7 @@ class AutoGPT:
             tools,
             max_iterations,
             feedback_tool=human_feedback_tool,
-            chat_history_memory=chat_history_memory,
+            chat_history_memory=chat_history,
         )
 
     def run(self, goals: List[str]) -> str:
@@ -93,61 +100,96 @@ class AutoGPT:
         while loop_count < self.max_iterations:
             # Discontinue if continuous limit is reached
             loop_count += 1
-            with get_openai_callback() as cb:
-                # Send message to AI, get response
-                print(self.chat_history_memory.messages)
-                assistant_reply = self.chain.run(
-                    goals=goals,
-                    messages=self.chat_history_memory.messages,
-                    memory=self.memory,
-                    user_input=user_input,
-                )
-            self.chain_cost += float(cb.total_cost)
-            # Print Assistant thoughts
-            print(assistant_reply)  # noqa: T201
-            self.chat_history_memory.add_message(HumanMessage(content=user_input))
-            self.chat_history_memory.add_message(AIMessage(content=assistant_reply))
-
-            # Get command name and arguments
-            action = self.output_parser.parse(assistant_reply)
-            tools = {t.name: t for t in self.tools}
-            if action.name == FINISH_NAME:
-                try:
-                    return action.args["response"]
-                except Exception as e:
-                    print("Error when finishing: ", str(e))
-                    return "Finished but with error at final step"
-            if action.name in tools:
-                tool = tools[action.name]
-                try:
-                    observation = tool.run(action.args)
-                except ValidationError as e:
-                    observation = (
-                        f"Validation Error in args: {str(e)}, args: {action.args}"
+            try:
+                with get_openai_callback() as cb:
+                    # Add detailed logging of LLM object state
+                    print("\n=== LLM Configuration ===")
+                    print(f"LLM Type: {type(self.chain.llm)}")
+                    try:
+                        print(f"Deployment: {self.chain.llm.deployment_name}")
+                        print(f"Endpoint: {self.chain.llm.azure_endpoint}")
+                    except Exception as e:
+                        print(f"Error accessing LLM attributes: {str(e)}")
+                    print("=======================\n")
+                    
+                    # Pass the messages directly without converting to strings
+                    assistant_reply = self.chain.run(
+                        goals=goals,
+                        messages=self.chat_history_memory.messages,  # Keep as Message objects
+                        memory=self.memory,  # Keep as retriever object
+                        user_input=user_input,
                     )
+                    
+                    if assistant_reply is None:
+                        print("Warning: Received None response from LLM")
+                        continue
+                        
+                # Print Assistant thoughts
+                print("Assistant Reply:", assistant_reply)  # noqa: T201
+                
+                # Add messages to chat history
+                self.chat_history_memory.add_message(HumanMessage(content=user_input))
+                self.chat_history_memory.add_message(AIMessage(content=assistant_reply))
+
+                # Get command name and arguments
+                try:
+                    action = self.output_parser.parse(assistant_reply)
+                    if action is None:
+                        print("Warning: Failed to parse action from reply")
+                        continue
                 except Exception as e:
-                    observation = (
-                        f"Error: {str(e)}, {type(e).__name__}, args: {action.args}"
+                    print(f"Error parsing action: {str(e)}")
+                    continue
+
+                tools = {t.name: t for t in self.tools}
+                if action.name == FINISH_NAME:
+                    try:
+                        return action.args["response"]
+                    except Exception as e:
+                        print("Error when finishing: ", str(e))
+                        return "Finished but with error at final step"
+                if action.name in tools:
+                    tool = tools[action.name]
+                    try:
+                        observation = tool.run(action.args)
+                    except ValidationError as e:
+                        observation = (
+                            f"Validation Error in args: {str(e)}, args: {action.args}"
+                        )
+                    except Exception as e:
+                        observation = (
+                            f"Error: {str(e)}, {type(e).__name__}, args: {action.args}"
+                        )
+                    result = f"Command {tool.name} returned: {observation}"
+                elif action.name == "ERROR":
+                    result = f"Error: {action.args}. "
+                else:
+                    result = (
+                        f"Unknown command '{action.name}'. "
+                        f"Please refer to the 'COMMANDS' list for available "
+                        f"commands and only respond in the specified JSON format."
                     )
-                result = f"Command {tool.name} returned: {observation}"
-            elif action.name == "ERROR":
-                result = f"Error: {action.args}. "
-            else:
-                result = (
-                    f"Unknown command '{action.name}'. "
-                    f"Please refer to the 'COMMANDS' list for available "
-                    f"commands and only respond in the specified JSON format."
+
+                memory_to_add = (
+                    f"Assistant Reply: {assistant_reply} " f"\nResult: {result} "
                 )
+                if self.feedback_tool is not None:
+                    feedback = f"\n{self.feedback_tool.run('Input: ')}"
+                    if feedback in {"q", "stop"}:
+                        print("EXITING")  # noqa: T201
+                        return "EXITING"
+                    memory_to_add += feedback
 
-            memory_to_add = (
-                f"Assistant Reply: {assistant_reply} " f"\nResult: {result} "
-            )
-            if self.feedback_tool is not None:
-                feedback = f"\n{self.feedback_tool.run('Input: ')}"
-                if feedback in {"q", "stop"}:
-                    print("EXITING")  # noqa: T201
-                    return "EXITING"
-                memory_to_add += feedback
-
-            self.memory.add_documents([Document(page_content=memory_to_add)])
-            self.chat_history_memory.add_message(AIMessage(content=result))
+                self.memory.add_documents([Document(page_content=memory_to_add)])
+                self.chat_history_memory.add_message(AIMessage(content=result))
+                
+            except Exception as e:
+                print("\n=== Error Details ===")
+                print(f"Error type: {type(e)}")
+                print(f"Error message: {str(e)}")
+                print(f"Error location: {e.__traceback__.tb_frame.f_code.co_name}")
+                import traceback
+                print("Full traceback:")
+                traceback.print_exc()
+                print("==================\n")
+                continue
