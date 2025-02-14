@@ -108,7 +108,7 @@ class BFSAgent:
         # Initialize the agent LLM
         agent_llm = ChatOpenAI(
             temperature=0.7,
-            model_name="gpt-4",
+            model_name="meta-llama/Llama-3.1-70B-Instruct",
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             max_retries=3

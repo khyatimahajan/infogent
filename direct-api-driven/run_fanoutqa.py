@@ -118,7 +118,7 @@ class BFSAgent:
         agent_llm = AzureChatOpenAI(
             temperature=0.7,
             deployment_name=self.chat_deployment,
-            model_name="gpt-4",
+            model_name="meta-llama/Llama-3.1-70B-Instruct",
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             api_version=self.api_version,
