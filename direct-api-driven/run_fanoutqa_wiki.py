@@ -5,7 +5,6 @@ from langchain_community.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
 from autogpt import AutoGPT
 from langchain.agents import Tool
 from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.callbacks import get_openai_callback

@@ -8,9 +8,9 @@ mkdir -p results
 
 # Run FanOutQA aggregation
 python run_fanoutqa_wiki.py \
-    --navigator_model gpt-4o-mini \
-    --aggregator_model gpt-4o-mini \
-    --extractor_model gpt-4o-mini \
+    --navigator_model meta-llama/Llama-3.1-70B-Instruct \
+    --aggregator_model meta-llama/Llama-3.1-70B-Instruct \
+    --extractor_model meta-llama/Llama-3.1-70B-Instruct \
     --chat_deployment ${CHAT_DEPLOYMENT} \
     --embedding_deployment ${EMBEDDING_DEPLOYMENT} \
     --api_version ${API_VERSION} \

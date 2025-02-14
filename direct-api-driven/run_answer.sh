@@ -8,7 +8,7 @@ export FANOUTQA_OPENAI_API_KEY=${AZURE_OPENAI_KEY}
 
 # Run answer generation and evaluation
 python fanoutqa_answer.py \
-    --answer_model gpt-4o-mini \
+    --answer_model meta-llama/Llama-3.1-70B-Instruct \
     --chat_deployment ${CHAT_DEPLOYMENT} \
     --api_version ${API_VERSION} \
     --data_path data/fanout-final-dev.json \
