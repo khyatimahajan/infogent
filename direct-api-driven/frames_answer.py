@@ -1,4 +1,4 @@
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_community.callbacks import get_openai_callback
 from langchain_google_genai import ChatGoogleGenerativeAI
 import json
@@ -20,9 +20,8 @@ def get_closed_book_output(args):
     dataset = pd.read_csv(args.data_path, sep='\t')
     output = list()
     for index in tqdm(range(0, len(dataset))):
-        llm = AzureChatOpenAI(
-            deployment_name=args.answer_model,
-            api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+        llm = ChatOpenAI(
+            model=args.answer_model,
             max_tokens=2000,
             temperature=0
         )
@@ -64,9 +63,8 @@ def get_search_output(args):
         print(item["id"])
         print(dataset_map[str(item["id"])])
         counts.append(len(item["aggregated_output"]))
-        llm = AzureChatOpenAI(
-            deployment_name=args.answer_model,
-            api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+        llm = ChatOpenAI(
+            model=args.answer_model,
             max_tokens=2000,
             temperature=0
         )
@@ -129,9 +127,8 @@ Response Format:
                 }
             )
         else:
-            llm = AzureChatOpenAI(
-                deployment_name=args.answer_model,
-                api_version=os.getenv("AZURE_API_VERSION", "2023-05-15"),
+            llm = ChatOpenAI(
+                model=args.answer_model,
                 max_tokens=2000,
                 temperature=0
             )
