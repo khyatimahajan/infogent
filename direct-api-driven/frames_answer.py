@@ -64,10 +64,10 @@ def get_search_output(args):
         print(dataset_map[str(item["id"])])
         counts.append(len(item["aggregated_output"]))
         llm = ChatOpenAI(
-            model=args.answer_model,
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            max_tokens=2000,
+            model=args.answer_model,
+            max_tokens=4000,
             temperature=0
         )
         messages = [
