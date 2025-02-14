@@ -1,4 +1,4 @@
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 import json
 from tqdm import tqdm
 import fanoutqa
@@ -31,9 +31,8 @@ def get_closed_book_output(args):
     dataset = json.load(open(args.data_path))
     output = list()
     for item in tqdm(dataset):
-        llm = AzureChatOpenAI(
-            azure_deployment=args.chat_deployment,
-            api_version=args.api_version,
+        llm = ChatOpenAI(
+            model=args.chat_deployment,
             max_tokens=4000, 
             temperature=0
         )
@@ -58,9 +57,8 @@ def get_search_output(args):
     counts = list()
     for item in tqdm(data):
         counts.append(len(item["aggregated_output"]))
-        llm = AzureChatOpenAI(
-            azure_deployment=args.chat_deployment,
-            api_version=args.api_version,
+        llm = ChatOpenAI(
+            model=args.chat_deployment,
             max_tokens=4000, 
             temperature=0
         )
@@ -137,13 +135,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--chat_deployment",
-        help="Azure OpenAI chat deployment name",
-        required=True,
-        type=str
-    )
-    parser.add_argument(
-        "--api_version",
-        help="Azure OpenAI API version",
+        help="OpenAI chat deployment name",
         required=True,
         type=str
     )
