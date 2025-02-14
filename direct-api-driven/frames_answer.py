@@ -22,7 +22,7 @@ def get_closed_book_output(args):
     for index in tqdm(range(0, len(dataset))):
         llm = ChatOpenAI(
             model=args.answer_model,
-            max_tokens=2000,
+            max_tokens=4000,
             temperature=0
         )
         prompt = get_prompt(dataset["Prompt"][index])
@@ -131,7 +131,7 @@ Response Format:
         else:
             llm = ChatOpenAI(
                 model=args.answer_model,
-                max_tokens=2000,
+                max_tokens=4000,
                 temperature=0
             )
             print(dataset[index]["question"])
