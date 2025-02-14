@@ -21,8 +21,9 @@ def get_closed_book_output(args):
     output = list()
     for index in tqdm(range(0, len(dataset))):
         llm = ChatOpenAI(
+            base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             model=args.answer_model,
-            max_tokens=4000,
             temperature=0
         )
         prompt = get_prompt(dataset["Prompt"][index])
@@ -129,8 +130,9 @@ Response Format:
             )
         else:
             llm = ChatOpenAI(
+                base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
                 model=args.answer_model,
-                max_tokens=4000,
                 temperature=0
             )
             print(dataset[index]["question"])
