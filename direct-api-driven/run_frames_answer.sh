@@ -11,7 +11,7 @@
 python frames_answer.py \
     --answer_model "meta-llama/Llama-3.1-70B-Instruct" \
     --data_path "data/test_frames_w_ids.json" \
-    --inp_path "results/frames_agg.json" \
+    --inp_path "results/frames_agg_2.json" \
     --score_path "results/frames_scores_agg.json" \
     --out_path "results/frames_output_agg.json"
 
