@@ -11,9 +11,9 @@
 python frames_answer.py \
     --answer_model "meta-llama/Llama-3.1-70B-Instruct" \
     --data_path "data/test_frames_w_ids.json" \
-    --inp_path "results/frames_agg_2.json" \
-    --score_path "results/frames_scores_agg.json" \
-    --out_path "results/frames_output_agg.json"
+    --inp_path "results/frames_agg_3.json" \
+    --score_path "results/frames_scores_agg_3.json" \
+    --out_path "results/frames_output_agg_3.json"
 
-echo "Output saved to results/frames_output_agg.json"
-echo "Scores saved to results/frames_scores_agg.json" 
+echo "Output saved to results/frames_output_agg_3.json"
+echo "Scores saved to results/frames_scores_agg_3.json" 

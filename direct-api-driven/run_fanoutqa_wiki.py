@@ -615,7 +615,7 @@ if __name__ == "__main__":
 
     starting_index = 58
     data = json.load(open(args.inp_path))
-    data = data[:starting_index]
+    data = data[starting_index:]
     output = list()
     log = list()
     for item in tqdm(data):

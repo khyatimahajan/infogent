@@ -14,5 +14,5 @@ python run_fanoutqa_wiki.py \
     --chat_deployment ${CHAT_DEPLOYMENT} \
     --embedding_deployment ${EMBEDDING_DEPLOYMENT} \
     --inp_path data/fanout-final-dev.json \
-    --out_path results/fanoutqa_dev_agg.json \
-    --log_path results/fanoutqa_dev_agg.log 
+    --out_path results/fanoutqa_dev_agg_3.json \
+    --log_path results/fanoutqa_dev_agg_3.log 

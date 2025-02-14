@@ -14,5 +14,5 @@ python run_fanoutqa_wiki.py \
     --chat_deployment ${CHAT_DEPLOYMENT} \
     --embedding_deployment ${EMBEDDING_DEPLOYMENT} \
     --inp_path data/test_frames_w_ids.json \
-    --out_path results/frames_agg_2.json \
-    --log_path results/frames_agg_2.log 
+    --out_path results/frames_agg_3.json \
+    --log_path results/frames_agg_3.log 
