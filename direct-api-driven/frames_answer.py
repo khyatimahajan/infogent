@@ -67,7 +67,6 @@ def get_search_output(args):
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             model=args.answer_model,
-            max_tokens=4000,
             temperature=0
         )
         messages = [
