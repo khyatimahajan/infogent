@@ -106,8 +106,8 @@ Play to your strengths as an LLM and pursue simple strategies with no legal comp
                     print("\n=== LLM Configuration ===")
                     print(f"LLM Type: {type(self.chain.llm)}")
                     try:
-                        print(f"Deployment: {self.chain.llm.deployment_name}")
-                        print(f"Endpoint: {self.chain.llm.azure_endpoint}")
+                        print(f"Deployment: {self.chain.llm.model}")
+                        print(f"Endpoint: {self.chain.llm.base_url}")
                     except Exception as e:
                         print(f"Error accessing LLM attributes: {str(e)}")
                     print("=======================\n")
