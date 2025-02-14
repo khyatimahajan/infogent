@@ -45,14 +45,12 @@ class BFSAgent:
         print(f"Navigator Model: {args.navigator_model}")
         print(f"Chat Deployment: {args.chat_deployment}")
         print(f"Embedding Deployment: {args.embedding_deployment}")
-        print(f"API Version: {args.api_version}\n")
         
         self.navigator_model = args.navigator_model
         self.aggregator_model = args.aggregator_model
         self.extractor_model = args.extractor_model
         self.chat_deployment = args.chat_deployment
         self.embedding_deployment = args.embedding_deployment
-        self.api_version = args.api_version
         
         self.enc = tiktoken.get_encoding("cl100k_base")
 
