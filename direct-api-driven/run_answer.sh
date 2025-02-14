@@ -10,7 +10,6 @@ export FANOUTQA_OPENAI_API_KEY=${AZURE_OPENAI_KEY}
 python fanoutqa_answer.py \
     --answer_model meta-llama/Llama-3.1-70B-Instruct \
     --chat_deployment ${CHAT_DEPLOYMENT} \
-    --api_version ${API_VERSION} \
     --data_path data/fanout-final-dev.json \
     --inp_path results/fanoutqa_dev_agg.json \
     --out_path results/fanoutqa_dev_answer.json \

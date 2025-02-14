@@ -13,7 +13,6 @@ python run_fanoutqa_wiki.py \
     --extractor_model meta-llama/Llama-3.1-70B-Instruct \
     --chat_deployment ${CHAT_DEPLOYMENT} \
     --embedding_deployment ${EMBEDDING_DEPLOYMENT} \
-    --api_version ${API_VERSION} \
     --inp_path data/fanout-final-dev.json \
     --out_path results/fanoutqa_dev_agg.json \
     --log_path results/fanoutqa_dev_agg.log 
