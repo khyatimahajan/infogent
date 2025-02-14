@@ -16,3 +16,6 @@ python run_fanoutqa_wiki.py \
     --inp_path data/fanout-final-dev.json \
     --out_path results/fanoutqa_dev_agg_3.json \
     --log_path results/fanoutqa_dev_agg_3.log 
+
+echo "Output saved to results/fanoutqa_dev_agg_3.json"
+echo "Log saved to results/fanoutqa_dev_agg_3.log"

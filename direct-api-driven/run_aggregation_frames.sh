@@ -16,3 +16,6 @@ python run_fanoutqa_wiki.py \
     --inp_path data/test_frames_w_ids.json \
     --out_path results/frames_agg_3.json \
     --log_path results/frames_agg_3.log 
+
+echo "Output saved to results/frames_agg_3.json"
+echo "Log saved to results/frames_agg_3.log"
