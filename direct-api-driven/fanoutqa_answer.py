@@ -4,6 +4,7 @@ from tqdm import tqdm
 import fanoutqa
 import argparse
 from fanoutqa.eval import evaluate
+import os
 
 def get_prompt(question):
     prompt = (
@@ -58,6 +59,8 @@ def get_search_output(args):
     for item in tqdm(data):
         counts.append(len(item["aggregated_output"]))
         llm = ChatOpenAI(
+            base_url=os.getenv("AZURE_OPENAI_URL"),
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
             model=args.chat_deployment,
             max_tokens=4000, 
             temperature=0
