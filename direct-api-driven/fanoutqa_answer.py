@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAI
 import json
 from tqdm import tqdm
 import fanoutqa
@@ -32,7 +32,7 @@ def get_closed_book_output(args):
     dataset = json.load(open(args.data_path))
     output = list()
     for item in tqdm(dataset):
-        llm = ChatOpenAI(
+        llm = OpenAI(
             model=args.chat_deployment,
             max_tokens=4000, 
             temperature=0
@@ -45,7 +45,8 @@ def get_closed_book_output(args):
 
         output.append({
             "id": item["id"],
-            "answer": response.content
+            # "answer": response.content
+            "answer": response
         })
     json.dump(output, open(args.out_path, "w"), indent=4)
     return output
@@ -58,7 +59,7 @@ def get_search_output(args):
     counts = list()
     for item in tqdm(data):
         counts.append(len(item["aggregated_output"]))
-        llm = ChatOpenAI(
+        llm = OpenAI(
             base_url=os.getenv("AZURE_OPENAI_URL"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             model=args.chat_deployment,
@@ -72,7 +73,8 @@ def get_search_output(args):
 
         output.append({
             "id": item["id"],
-            "answer": response.content
+            # "answer": response.content
+            "answer": response
         })
 
     json.dump(output, open(args.out_path, "w"), indent=4)

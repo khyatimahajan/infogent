@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAI
 from langchain_community.callbacks import get_openai_callback
 from langchain_google_genai import ChatGoogleGenerativeAI
 import json
@@ -20,9 +20,10 @@ def get_closed_book_output(args):
     dataset = pd.read_csv(args.data_path, sep='\t')
     output = list()
     for index in tqdm(range(0, len(dataset))):
-        llm = ChatOpenAI(
+        llm = OpenAI(
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            max_tokens=2000,
             model=args.answer_model,
             temperature=0
         )
@@ -34,7 +35,8 @@ def get_closed_book_output(args):
 
         output.append({
             "id": str(dataset["ID"][index]),
-            "answer": response.content
+            # "answer": response.content
+            "answer": response
         })
     json.dump(output, open(args.out_path, "w"), indent=4)
     return output
@@ -64,9 +66,10 @@ def get_search_output(args):
         print(item["id"])
         print(dataset_map[str(item["id"])])
         counts.append(len(item["aggregated_output"]))
-        llm = ChatOpenAI(
+        llm = OpenAI(
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            max_tokens=2000,
             model=args.answer_model,
             temperature=0
         )
@@ -76,7 +79,8 @@ def get_search_output(args):
         
         try:
             response = llm.invoke(messages)  
-            response_content = response.content
+            # response_content = response.content
+            response_content = response
         except Exception as e:
             print(e)
             response_content = str(e)
@@ -129,9 +133,10 @@ Response Format:
                 }
             )
         else:
-            llm = ChatOpenAI(
+            llm = OpenAI(
                 base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                max_tokens=2000,
                 model=args.answer_model,
                 temperature=0
             )
@@ -143,7 +148,8 @@ Response Format:
             ]
             response = llm.invoke(messages)
             try:
-                decision = json.loads(response.content)["Decision"]
+                # decision = json.loads(response.content)["Decision"]
+                decision = json.loads(response)["Decision"]
             except:
                 decision = "FALSE"
 
