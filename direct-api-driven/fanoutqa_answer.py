@@ -33,6 +33,8 @@ def get_closed_book_output(args):
     output = list()
     for item in tqdm(dataset):
         llm = OpenAI(
+            base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
             model=args.chat_deployment,
             max_tokens=4000, 
             temperature=0
@@ -60,7 +62,7 @@ def get_search_output(args):
     for item in tqdm(data):
         counts.append(len(item["aggregated_output"]))
         llm = OpenAI(
-            base_url=os.getenv("AZURE_OPENAI_URL"),
+            base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             model=args.chat_deployment,
             max_tokens=4000, 
